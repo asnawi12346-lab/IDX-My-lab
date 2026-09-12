@@ -31,47 +31,53 @@ jobs:
         run: uv run idx signals
 
       - name: Send IDX briefing to Telegram
-  env:
-    TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-  run: |
-    FILE=$(find data/briefings -type f -name "*.md" -print -quit)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          FILE=$(find data/briefings -type f -name "*.md" -print -quit)
 
-    if [ -z "$FILE" ]; then
-      echo "Briefing tidak ditemukan"
-      exit 1
-    fi
+          if [ -z "$FILE" ]; then
+            echo "Briefing tidak ditemukan"
+            exit 1
+          fi
 
-    echo "Mengirim: $FILE"
+          echo "Mengirim briefing: $FILE"
 
-    python - "$FILE" <<'PY'
-    import os
-    import sys
-    import urllib.request
-    import urllib.parse
+          python - "$FILE" <<'PY'
+          import os
+          import sys
+          import urllib.request
+          import urllib.parse
 
-    file_path = sys.argv[1]
+          file_path = sys.argv[1]
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        text = f.read()
+          with open(file_path, "r", encoding="utf-8") as f:
+              text = f.read()
 
-    max_len = 3900
-    if len(text) > max_len:
-        text = text[:max_len] + "\n\n...[dipotong]"
+          max_len = 3900
 
-    token = os.environ["TELEGRAM_BOT_TOKEN"]
-    chat_id = os.environ["TELEGRAM_CHAT_ID"]
+          if len(text) > max_len:
+              text = text[:max_len] + "\n\n...[dipotong]"
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+          token = os.environ["TELEGRAM_BOT_TOKEN"]
+          chat_id = os.environ["TELEGRAM_CHAT_ID"]
 
-    data = urllib.parse.urlencode({
-        "chat_id": chat_id,
-        "text": "📊 IDX-My-lab Briefing\n\n" + text
-    }).encode()
+          url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    request = urllib.request.Request(url, data=data, method="POST")
+          message = "📊 IDX-My-lab Briefing\n\n" + text
 
-    with urllib.request.urlopen(request) as response:
-        print(response.read().decode())
-    PY
-     
+          data = urllib.parse.urlencode({
+              "chat_id": chat_id,
+              "text": message
+          }).encode()
+
+          request = urllib.request.Request(
+              url,
+              data=data,
+              method="POST"
+          )
+
+          with urllib.request.urlopen(request) as response:
+              print(response.read().decode())
+          PY
