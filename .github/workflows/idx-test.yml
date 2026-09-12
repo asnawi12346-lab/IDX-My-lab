@@ -30,6 +30,54 @@ jobs:
       - name: Run IDX signals
         run: uv run idx signals
 
+      - name: Audit generated data
+        run: |
+          echo "========================================"
+          echo "        IDX DATA AUDIT"
+          echo "========================================"
+
+          echo ""
+          echo "===== DATA DIRECTORY ====="
+          if [ -d "data" ]; then
+            find data -maxdepth 3 -type f -printf '%p | %s bytes\n' | sort
+          else
+            echo "Folder data tidak ditemukan"
+          fi
+
+          echo ""
+          echo "===== BRIEFINGS ====="
+          if [ -d "data/briefings" ]; then
+            find data/briefings -maxdepth 2 -type f -printf '%p | %s bytes\n' | sort
+          else
+            echo "Folder data/briefings tidak ditemukan"
+          fi
+
+          echo ""
+          echo "===== IMPORTANT PARQUET FILES ====="
+
+          for file in \
+            data/stock_summary.parquet \
+            data/financial_ratios.parquet \
+            data/corporate_actions.parquet \
+            data/broker_summary.parquet
+          do
+            if [ -f "$file" ]; then
+              echo "FOUND: $file"
+              ls -lh "$file"
+            else
+              echo "MISSING: $file"
+            fi
+          done
+
+          echo ""
+          echo "===== GIT STATUS ====="
+          git status --short
+
+          echo ""
+          echo "========================================"
+          echo "          AUDIT SELESAI"
+          echo "========================================"
+
       - name: Send IDX briefing to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
