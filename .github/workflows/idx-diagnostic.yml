@@ -8,149 +8,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # ============================================================
-      # 1. CHECKOUT
-      # ============================================================
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-
-      # ============================================================
-      # 2. SETUP PYTHON
-      # ============================================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-
-      # ============================================================
-      # 3. INSTALL CURL_CFFI
-      # ============================================================
-      - name: Install diagnostic dependencies
+      - name: Install curl_cffi
         run: |
           python -m pip install --upgrade pip
           python -m pip install curl_cffi
 
-
-      # ============================================================
-      # 4. RUNNER INFORMATION
-      # ============================================================
-      - name: Show runner information
+      - name: Show environment
         run: |
-          echo "=========================================="
-          echo "RUNNER INFORMATION"
-          echo "=========================================="
-
-          echo "OS:"
-          uname -a
-
-          echo
-          echo "Python:"
+          echo "=== PYTHON ==="
           python --version
 
-          echo
-          echo "curl:"
-          curl --version | head -n 1
+          echo "=== CURL ==="
+          curl --version
 
-          echo
-          echo "Public IP:"
-          curl -s https://api.ipify.org || true
-
-          echo
-          echo
-
-
-      # ============================================================
-      # 5. TEST IDX HOMEPAGE
-      # ============================================================
-      - name: Test 1 - IDX Homepage
+      - name: Test 1 - Normal curl
         run: |
-          echo "=========================================="
-          echo "TEST 1 - IDX HOMEPAGE"
-          echo "=========================================="
+          echo "======================================"
+          echo "TEST 1 - NORMAL CURL"
+          echo "======================================"
 
           set +e
 
-          curl \
-            -L \
-            -sS \
-            -D /tmp/idx_home_headers.txt \
-            -o /tmp/idx_home_body.txt \
-            "https://www.idx.co.id/"
-
-          EXIT_CODE=$?
-
-          echo
-          echo "curl exit code: $EXIT_CODE"
-
-          echo
-          echo "----- RESPONSE HEADERS -----"
-          cat /tmp/idx_home_headers.txt || true
-
-          echo
-          echo "----- RESPONSE BODY (first 2000 chars) -----"
-          head -c 2000 /tmp/idx_home_body.txt || true
-
-          echo
-          echo
-
-          exit 0
-
-
-      # ============================================================
-      # 6. TEST ORDINARY CURL
-      # ============================================================
-      - name: Test 2 - Ordinary curl TradingSummary
-        run: |
-          echo "=========================================="
-          echo "TEST 2 - ORDINARY CURL"
-          echo "=========================================="
-
-          URL="https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
-
-          set +e
-
-          curl \
-            -L \
-            -sS \
-            -D /tmp/curl_headers.txt \
-            -o /tmp/curl_body.txt \
+          curl -L -sS \
+            -D /tmp/headers.txt \
             -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" \
             -H "Accept: application/json, text/javascript, */*; q=0.01" \
-            -H "Accept-Language: en-US,en;q=0.9,id;q=0.8" \
             -H "Referer: https://www.idx.co.id/" \
-            -H "X-Requested-With: XMLHttpRequest" \
-            "${URL}?date=20260912&start=0&length=5"
-
-          EXIT_CODE=$?
+            "https://www.idx.co.id/primary/TradingSummary/GetStockSummary?date=20260912&start=0&length=5" \
+            -o /tmp/body.txt
 
           echo
-          echo "curl exit code: $EXIT_CODE"
+          echo "=== HEADERS ==="
+          cat /tmp/headers.txt
 
           echo
-          echo "----- RESPONSE HEADERS -----"
-          cat /tmp/curl_headers.txt || true
+          echo "=== BODY ==="
+          head -c 3000 /tmp/body.txt
 
           echo
-          echo "----- RESPONSE BODY (first 3000 chars) -----"
-          head -c 3000 /tmp/curl_body.txt || true
+          echo "=== CURL EXIT CODE ==="
+          echo $?
 
-          echo
-          echo
-
-          exit 0
-
-
-      # ============================================================
-      # 7. TEST CURL_CFFI + CHROME IMPERSONATION
-      # ============================================================
-      - name: Test 3 - curl_cffi Chrome impersonation
+      - name: Test 2 - curl_cffi Chrome
         run: |
-          echo "=========================================="
-          echo "TEST 3 - CURL_CFFI CHROME"
-          echo "=========================================="
+          echo "======================================"
+          echo "TEST 2 - CURL_CFFI CHROME"
+          echo "======================================"
 
           python - <<'PY'
           from curl_cffi import requests
@@ -167,21 +78,10 @@ jobs:
               "Accept": "application/json, text/javascript, */*; q=0.01",
               "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
               "Referer": "https://www.idx.co.id/",
-              "X-Requested-With": "XMLHttpRequest",
           }
 
-          print("REQUEST URL:")
-          print(url)
-
-          print()
-          print("PARAMETERS:")
-          print(params)
-
-          print()
-          print("SENDING REQUEST...")
-
           try:
-              response = requests.get(
+              r = requests.get(
                   url,
                   params=params,
                   headers=headers,
@@ -189,47 +89,30 @@ jobs:
                   timeout=30,
               )
 
-              print()
-              print("STATUS:")
-              print(response.status_code)
+              print("STATUS:", r.status_code)
+              print("URL:", r.url)
 
-              print()
-              print("FINAL URL:")
-              print(response.url)
+              print("\n=== RESPONSE HEADERS ===")
 
-              print()
-              print("RESPONSE HEADERS:")
-
-              for key, value in response.headers.items():
+              for key, value in r.headers.items():
                   if key.lower() != "set-cookie":
                       print(f"{key}: {value}")
 
-              print()
-              print("RESPONSE BODY:")
-              print(response.text[:3000])
+              print("\n=== RESPONSE BODY ===")
+              print(r.text[:3000])
 
           except Exception as e:
-              print()
-              print("REQUEST ERROR:")
-              print(type(e).__name__)
-              print(str(e))
-
+              print("ERROR:", repr(e))
           PY
 
-
-      # ============================================================
-      # 8. TEST CURL_CFFI SESSION
-      # ============================================================
-      - name: Test 4 - curl_cffi Session
+      - name: Test 3 - Browser Session
         run: |
-          echo "=========================================="
-          echo "TEST 4 - CURL_CFFI SESSION"
-          echo "=========================================="
+          echo "======================================"
+          echo "TEST 3 - BROWSER SESSION"
+          echo "======================================"
 
           python - <<'PY'
           from curl_cffi import requests
-
-          print("Creating Chrome-like session...")
 
           session = requests.Session(
               impersonate="chrome"
@@ -241,10 +124,9 @@ jobs:
               "Upgrade-Insecure-Requests": "1",
           })
 
-          print()
-          print("STEP 1: Open IDX homepage")
-
           try:
+              print("Opening IDX homepage...")
+
               home = session.get(
                   "https://www.idx.co.id/",
                   timeout=30,
@@ -252,254 +134,61 @@ jobs:
 
               print("HOME STATUS:", home.status_code)
 
-              print()
-              print("COOKIES AFTER HOMEPAGE:")
-
+              print("\n=== COOKIES ===")
               print(session.cookies.get_dict())
 
-          except Exception as e:
-              print("HOME REQUEST ERROR:")
-              print(type(e).__name__)
-              print(str(e))
+              session.headers.update({
+                  "Accept": "application/json, text/javascript, */*; q=0.01",
+                  "Referer": "https://www.idx.co.id/",
+                  "X-Requested-With": "XMLHttpRequest",
+              })
 
+              print("\nRequesting TradingSummary...")
 
-          print()
-          print("STEP 2: Request TradingSummary")
-
-          session.headers.update({
-              "Accept": "application/json, text/javascript, */*; q=0.01",
-              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "Referer": "https://www.idx.co.id/data-pasar/ringkasan-perdagangan/ringkasan-saham/",
-              "X-Requested-With": "XMLHttpRequest",
-          })
-
-          api_url = (
-              "https://www.idx.co.id/"
-              "primary/TradingSummary/GetStockSummary"
-          )
-
-          params = {
-              "date": "20260912",
-              "start": 0,
-              "length": 5,
-          }
-
-          try:
-              response = session.get(
-                  api_url,
-                  params=params,
+              api = session.get(
+                  "https://www.idx.co.id/primary/TradingSummary/GetStockSummary",
+                  params={
+                      "date": "20260912",
+                      "start": 0,
+                      "length": 5,
+                  },
                   timeout=30,
               )
 
-              print()
-              print("API STATUS:")
-              print(response.status_code)
+              print("API STATUS:", api.status_code)
+              print("API URL:", api.url)
 
-              print()
-              print("FINAL URL:")
-              print(response.url)
+              print("\n=== API HEADERS ===")
 
-              print()
-              print("API RESPONSE HEADERS:")
-
-              for key, value in response.headers.items():
+              for key, value in api.headers.items():
                   if key.lower() != "set-cookie":
                       print(f"{key}: {value}")
 
-              print()
-              print("API RESPONSE BODY:")
-              print(response.text[:3000])
+              print("\n=== API BODY ===")
+              print(api.text[:3000])
 
           except Exception as e:
-              print()
-              print("API REQUEST ERROR:")
-              print(type(e).__name__)
-              print(str(e))
-
+              print("ERROR:", repr(e))
           PY
 
-
-      # ============================================================
-      # 9. TEST BROKER SUMMARY
-      # ============================================================
-      - name: Test 5 - Broker Summary
+      - name: Test 4 - IDX Homepage Only
         run: |
-          echo "=========================================="
-          echo "TEST 5 - BROKER SUMMARY"
-          echo "=========================================="
+          echo "======================================"
+          echo "TEST 4 - IDX HOMEPAGE"
+          echo "======================================"
 
-          python - <<'PY'
-          from curl_cffi import requests
+          set +e
 
-          url = "https://www.idx.co.id/primary/TradingSummary/GetBrokerSummary"
+          curl -L -sS \
+            -D /tmp/home_headers.txt \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" \
+            "https://www.idx.co.id/" \
+            -o /tmp/home_body.txt
 
-          params = {
-              "date": "20260912",
-              "start": 0,
-              "length": 5,
-          }
-
-          headers = {
-              "Accept": "application/json, text/javascript, */*; q=0.01",
-              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "Referer": "https://www.idx.co.id/",
-              "X-Requested-With": "XMLHttpRequest",
-          }
-
-          try:
-              response = requests.get(
-                  url,
-                  params=params,
-                  headers=headers,
-                  impersonate="chrome",
-                  timeout=30,
-              )
-
-              print("STATUS:", response.status_code)
-              print("URL:", response.url)
-
-              print()
-              print("BODY:")
-              print(response.text[:3000])
-
-          except Exception as e:
-              print("ERROR:")
-              print(type(e).__name__)
-              print(str(e))
-
-          PY
-
-
-      # ============================================================
-      # 10. TEST INDEX SUMMARY
-      # ============================================================
-      - name: Test 6 - Index Summary
-        run: |
-          echo "=========================================="
-          echo "TEST 6 - INDEX SUMMARY"
-          echo "=========================================="
-
-          python - <<'PY'
-          from curl_cffi import requests
-
-          url = "https://www.idx.co.id/primary/TradingSummary/GetIndexSummary"
-
-          params = {
-              "date": "20260912",
-              "start": 0,
-              "length": 5,
-          }
-
-          headers = {
-              "Accept": "application/json, text/javascript, */*; q=0.01",
-              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "Referer": "https://www.idx.co.id/",
-              "X-Requested-With": "XMLHttpRequest",
-          }
-
-          try:
-              response = requests.get(
-                  url,
-                  params=params,
-                  headers=headers,
-                  impersonate="chrome",
-                  timeout=30,
-              )
-
-              print("STATUS:", response.status_code)
-              print("URL:", response.url)
-
-              print()
-              print("BODY:")
-              print(response.text[:3000])
-
-          except Exception as e:
-              print("ERROR:")
-              print(type(e).__name__)
-              print(str(e))
-
-          PY
-
-
-      # ============================================================
-      # 11. TEST SIMPLE IDX PUBLIC ENDPOINT
-      # ============================================================
-      - name: Test 7 - IDX Public Endpoint
-        run: |
-          echo "=========================================="
-          echo "TEST 7 - IDX PUBLIC ENDPOINT"
-          echo "=========================================="
-
-          python - <<'PY'
-          from curl_cffi import requests
-
-          tests = [
-              (
-                  "IDX Homepage",
-                  "https://www.idx.co.id/"
-              ),
-              (
-                  "Company Profiles",
-                  "https://www.idx.co.id/primary/ListedCompany/GetCompanyProfiles"
-              ),
-          ]
-
-          headers = {
-              "Accept": "application/json, text/javascript, */*; q=0.01",
-              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "Referer": "https://www.idx.co.id/",
-              "X-Requested-With": "XMLHttpRequest",
-          }
-
-          for name, url in tests:
-
-              print()
-              print("------------------------------------------")
-              print(name)
-              print("------------------------------------------")
-
-              try:
-                  response = requests.get(
-                      url,
-                      headers=headers,
-                      impersonate="chrome",
-                      timeout=30,
-                  )
-
-                  print("STATUS:", response.status_code)
-                  print("URL:", response.url)
-
-                  print("BODY:")
-                  print(response.text[:1000])
-
-              except Exception as e:
-                  print("ERROR:")
-                  print(type(e).__name__)
-                  print(str(e))
-
-          PY
-
-
-      # ============================================================
-      # 12. SUMMARY
-      # ============================================================
-      - name: Diagnostic summary
-        run: |
           echo
-          echo "=========================================="
-          echo "IDX DIAGNOSTIC FINISHED"
-          echo "=========================================="
+          echo "=== HOMEPAGE HEADERS ==="
+          cat /tmp/home_headers.txt
+
           echo
-          echo "Jangan ubah workflow produksi dulu."
-          echo
-          echo "Yang kita cari:"
-          echo
-          echo "1. Apakah homepage IDX bisa diakses?"
-          echo "2. Apakah TradingSummary mendapat 403?"
-          echo "3. Apakah curl_cffi Chrome berhasil?"
-          echo "4. Apakah session + cookie mengubah hasil?"
-          echo "5. Apakah BrokerSummary juga 403?"
-          echo "6. Apakah IndexSummary juga 403?"
-          echo "7. Apakah endpoint IDX lainnya bisa diakses?"
-          echo
-          echo "HASIL INI AKAN MENENTUKAN PERBAIKAN BERIKUTNYA."
+          echo "=== HOMEPAGE BODY SIZE ==="
+          wc -c /tmp/home_body.txt
