@@ -1,0 +1,95 @@
+name: Test NeaByteLab IDX-API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-neabytelab:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Clone NeaByteLab IDX-API
+        run: |
+          git clone --depth 1 https://github.com/NeaByteLab/IDX-API.git /tmp/IDX-API
+
+      - name: Test IDX homepage
+        run: |
+          cd /tmp/IDX-API
+
+          deno eval --allow-net '
+          const r = await fetch("https://www.idx.co.id/id", {
+            headers: {
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+              "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+            }
+          });
+
+          console.log("IDX_HOME_STATUS=" + r.status);
+          console.log("IDX_HOME_SERVER=" + (r.headers.get("server") ?? ""));
+          console.log("IDX_HOME_CF=" + (r.headers.get("cf-mitigated") ?? ""));
+          '
+
+      - name: Test NeaByteLab broker and stock summary
+        run: |
+          cat > /tmp/test_idx.ts <<'EOF'
+          import IDXClient from "/tmp/IDX-API/src/index.ts"
+
+          const client = new IDXClient()
+          const date = "20260911"
+
+          console.log("================================")
+          console.log("TEST STOCK SUMMARY")
+          console.log("DATE:", date)
+          console.log("================================")
+
+          try {
+            const stock = await client.trading.getStockSummary(date)
+
+            console.log("STOCK RESULT:", stock ? "DATA" : "NULL")
+            console.log("STOCK COUNT:", stock?.length ?? 0)
+
+            if (stock) {
+              console.log(JSON.stringify(stock.slice(0, 3), null, 2))
+            }
+          } catch (e) {
+            console.error("STOCK ERROR:", e)
+          }
+
+          console.log("================================")
+          console.log("TEST BROKER SUMMARY")
+          console.log("DATE:", date)
+          console.log("================================")
+
+          try {
+            const broker = await client.trading.getBrokerSummary(
+              date,
+              0,
+              10
+            )
+
+            console.log("BROKER RESULT:", broker ? "DATA" : "NULL")
+            console.log(
+              "BROKER COUNT:",
+              broker?.data?.length ?? 0
+            )
+
+            if (broker) {
+              console.log(
+                JSON.stringify(broker.data.slice(0, 3), null, 2)
+              )
+            }
+          } catch (e) {
+            console.error("BROKER ERROR:", e)
+          }
+          EOF
+
+          deno run \
+            --allow-net \
+            --allow-read \
+            /tmp/test_idx.ts
