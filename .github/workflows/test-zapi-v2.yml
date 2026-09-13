@@ -7,5 +7,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Verify workflow
-        run: echo "Zapi workflow is registered and runnable"
+      - name: Test Zapi Stock Summary
+        env:
+          ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+        run: |
+          echo "=== TEST ZAPI STOCK SUMMARY ==="
+
+          RESPONSE=$(curl -sS \
+            -w '\nHTTP_STATUS:%{http_code}' \
+            -H "Authorization: Bearer ${ZAPI_API_KEY}" \
+            -H "Accept: application/json" \
+            "https://api.zpi.web.id/v1/finance:idx/stock-summary")
+
+          echo "$RESPONSE"
