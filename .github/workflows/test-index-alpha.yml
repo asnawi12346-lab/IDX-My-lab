@@ -1,0 +1,86 @@
+name: TEST 6 - Index Alpha
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-index-alpha:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test Index Alpha API
+        env:
+          INDEX_ALPHA_API_KEY: ${{ secrets.INDEX_ALPHA_API_KEY }}
+        run: |
+          set +e
+
+          echo "======================================"
+          echo "TEST 6 - INDEX ALPHA"
+          echo "======================================"
+
+          if [ -z "$INDEX_ALPHA_API_KEY" ]; then
+            echo "ERROR: INDEX_ALPHA_API_KEY belum ada di GitHub Secrets"
+            exit 1
+          fi
+
+          echo
+          echo "=== 1. BBRI BROKER SUMMARY ==="
+
+          curl -sS \
+            --max-time 30 \
+            -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s\n" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${INDEX_ALPHA_API_KEY}" \
+            "https://api.indexalpha.id/stocks/broker-summary?ticker=BBRI&from=2026-09-11&to=2026-09-11&investor=all&market=RG"
+
+          echo
+          echo "=== 2. BBRI FOREIGN FLOW ==="
+
+          curl -sS \
+            --max-time 30 \
+            -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s\n" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${INDEX_ALPHA_API_KEY}" \
+            "https://api.indexalpha.id/foreign-flow?ticker=BBRI&from=2026-09-11&to=2026-09-11&market=RG"
+
+          echo
+          echo "=== 3. BATCH BROKER SUMMARY ==="
+
+          curl -sS \
+            --max-time 30 \
+            -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s\n" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${INDEX_ALPHA_API_KEY}" \
+            -X POST \
+            "https://api.indexalpha.id/stocks/broker-summary/batch" \
+            -d '{
+              "tickers": ["BBRI", "BBCA", "BMRI"],
+              "from": "2026-09-11",
+              "to": "2026-09-11",
+              "investor": "all",
+              "market": "RG"
+            }'
+
+          echo
+          echo "=== 4. BATCH FOREIGN FLOW ==="
+
+          curl -sS \
+            --max-time 30 \
+            -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s\n" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${INDEX_ALPHA_API_KEY}" \
+            -X POST \
+            "https://api.indexalpha.id/foreign-flow/batch" \
+            -d '{
+              "tickers": ["BBRI", "BBCA", "BMRI"],
+              "from": "2026-09-11",
+              "to": "2026-09-11",
+              "market": "RG"
+            }'
+
+          echo
+          echo "======================================"
+          echo "TEST 6 SELESAI"
+          echo "======================================"
