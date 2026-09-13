@@ -16,19 +16,8 @@ jobs:
           python - <<'PY'
           import os
           import urllib.request
-          import urllib.parse
 
-          params = urllib.parse.urlencode({
-              "code": "BBRI",
-              "length": 1,
-              "start": 0
-          })
-
-          url = (
-              "https://api.zpi.web.id/v1/finance:idx/"
-              "stock-summary?"
-              + params
-          )
+          url = "https://api.zpi.web.id/v1/finance:idx/stock-summary?code=BBRI"
 
           req = urllib.request.Request(
               url,
@@ -44,6 +33,7 @@ jobs:
           except Exception as e:
               print("ERROR:", repr(e))
               raise
+
           PY
 
       - name: Test Zapi Broker Summary
@@ -53,19 +43,8 @@ jobs:
           python - <<'PY'
           import os
           import urllib.request
-          import urllib.parse
 
-          params = urllib.parse.urlencode({
-              "code": "BBRI",
-              "length": 10,
-              "start": 0
-          })
-
-          url = (
-              "https://api.zpi.web.id/v1/finance:idx/"
-              "broker-summary?"
-              + params
-          )
+          url = "https://api.zpi.web.id/v1/finance:idx/broker-summary?code=BBRI"
 
           req = urllib.request.Request(
               url,
@@ -81,6 +60,7 @@ jobs:
           except Exception as e:
               print("ERROR:", repr(e))
               raise
+
           PY
 
       - name: Test Zapi Foreign Flow
@@ -90,20 +70,8 @@ jobs:
           python - <<'PY'
           import os
           import urllib.request
-          import urllib.parse
 
-          params = urllib.parse.urlencode({
-              "code": "BBRI",
-              "length": 1,
-              "start": 0,
-              "sort": "net"
-          })
-
-          url = (
-              "https://api.zpi.web.id/v1/finance:idx/"
-              "foreign-flow?"
-              + params
-          )
+          url = "https://api.zpi.web.id/v1/finance:idx/foreign-flow?code=BBRI"
 
           req = urllib.request.Request(
               url,
@@ -119,5 +87,6 @@ jobs:
           except Exception as e:
               print("ERROR:", repr(e))
               raise
+
           PY
 ```
